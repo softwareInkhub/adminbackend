@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Schema Service Test</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .container { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+        .operations-panel { padding: 20px; background: #f8f9fa; }
+        .schemas-panel { padding: 20px; }
+        .schema-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .schema-card h3 { margin-top: 0; }
+        .actions { margin-top: 10px; }
+        button {
+            padding: 8px 15px;
+            margin-right: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .view-btn { background: #007bff; color: white; }
+        .edit-btn { background: #28a745; color: white; }
+        .delete-btn { background: #dc3545; color: white; }
+        .search-box {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+        }
+        .form-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .field-container {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .remove-field {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+        }
+
+        .success-msg { color: #155724; background: #d4edda; padding: 10px; border-radius: 4px; }
+        .error-msg { color: #721c24; background: #f8d7da; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="operations-panel">
+            <h2>Operations</h2>
+            <input type="text" class="search-box" placeholder="Search schemas..." oninput="searchSchemas(this.value)">
+            <button onclick="showCreateForm()">Create New Schema</button>
+            <div id="operationForm"></div>
+        </div>
+        
+        <div class="schemas-panel">
+            <h2>Schemas</h2>
+            <div id="schemasList"></div>
+        </div>
+    </div>
+
+    <script>
+        let schemas = [];
+
+        async function loadSchemas() {
+            try {
+                const response = await fetch('/api/schemas');
+                schemas = await response.json();
+                displaySchemas(schemas);
+            } catch (error) {
+                console.error('Error loading schemas:', error);
+            }
+        }
+
+        function displaySchemas(schemasToShow) {
+            const container = document.getElementById('schemasList');
+            container.innerHTML = schemasToShow.map(schema => `
+                <div class="schema-card">
+                    <h3>${schema.name}</h3>
+                    <p>${schema.description || 'No description'}</p>
+                    <div>Status: ${schema.status}</div>
+                    <div>Fields: ${schema.fields.length}</div>
+                    <div class="actions">
+                        <button class="view-btn" onclick="viewSchema('${schema.id}')">View</button>
+                        <button class="edit-btn" onclick="editSchema('${schema.id}')">Edit</button>
+                        <button class="delete-btn" onclick="deleteSchema('${schema.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function searchSchemas(query) {
+            const filtered = schemas.filter(schema => 
+                schema.name.toLowerCase().includes(query.toLowerCase()) ||
+                schema.description?.toLowerCase().includes(query.toLowerCase())
+            );
+            displaySchemas(filtered);
+        }
+
+        async function viewSchema(id) {
+            try {
+                const response = await fetch(`/api/schemas/${id}`);
+                const schema = await response.json();
+                document.getElementById('operationForm').innerHTML = `
+                    <h3>Schema Details</h3>
+                    <pre>${JSON.stringify(schema, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('Error viewing schema:', error);
+            }
+        }
+
+        function showCreateForm() {
+            document.getElementById('operationForm').innerHTML = generateSchemaForm();
+        }
+
+        function generateSchemaForm(schema = null) {
+            const isEdit = !!schema;
+            return `
+                <div class="form-container">
+                    <h3>${isEdit ? 'Edit Schema' : 'Create New Schema'}</h3>
+                    <form id="schemaForm" onsubmit="handleSchemaSubmit(event)">
+                        ${isEdit ? `<input type="hidden" name="id" value="${schema.id}">` : ''}
+                        <div class="form-group">
+                            <label>Name:</label>
+                            <input type="text" name="name" required value="${isEdit ? schema.name : ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Description:</label>
+                            <textarea name="description">${isEdit ? schema.description || '' : ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Status:</label>
+                            <select name="status" required>
+                                ${['DRAFT', 'ACTIVE', 'INACTIVE'].map(status => 
+                                    `<option value="${status}" ${isEdit && schema.status === status ? 'selected' : ''}>${status}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tags (comma separated):</label>
+                            <input type="text" name="tags" value="${isEdit ? (schema.tags || []).join(', ') : ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Fields:</label>
+                            <button type="button" onclick="addField()">Add Field</button>
+                            <div id="fieldsContainer">
+                                ${isEdit ? schema.fields.map(field => generateFieldHtml(field)).join('') : generateFieldHtml()}
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit">${isEdit ? 'Update' : 'Create'}</button>
+                            <button type="button" onclick="cancelEdit()" class="delete-btn">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
+
+        function generateFieldHtml(field = null) {
+            return `
+                <div class="field-container">
+                    <button type="button" class="remove-field delete-btn" onclick="this.parentElement.remove()">×</button>
+                    <div class="form-group">
+                        <label>Field Name:</label>
+                        <input type="text" class="field-name" required value="${field?.name || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Type:</label>
+                        <select class="field-type" required>
+                            ${['string', 'number', 'boolean', 'date', 'array', 'object', 'enum']
+                                .map(type => `<option value="${type}" ${field?.type === type ? 'selected' : ''}>${type}</option>`)
+                                .join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" class="field-required" ${field?.required ? 'checked' : ''}>
+                            Required
+                        </label>
+                    </div>
+                </div>
+            `;
+        }
+
+        function addField() {
+            const container = document.getElementById('fieldsContainer');
+            container.insertAdjacentHTML('beforeend', generateFieldHtml());
+        }
+
+        async function editSchema(id) {
+            try {
+                const response = await fetch(`/api/schemas/${id}`);
+                const schema = await response.json();
+                document.getElementById('operationForm').innerHTML = generateSchemaForm(schema);
+                document.getElementById('operationForm').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                showMessage(`Error loading schema: ${error.message}`, false);
+            }
+        }
+
+        async function handleSchemaSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const schemaId = formData.get('id');
+            
+            try {
+                const fields = Array.from(document.querySelectorAll('.field-container')).map(container => ({
+                    name: container.querySelector('.field-name').value,
+                    type: container.querySelector('.field-type').value,
+                    required: container.querySelector('.field-required').checked
+                }));
+
+                const data = {
+                    name: formData.get('name'),
+                    description: formData.get('description'),
+                    status: formData.get('status'),
+                    tags: formData.get('tags') ? formData.get('tags').split(',').map(tag => tag.trim()) : [],
+                    fields: fields
+                };
+
+                const response = await fetch(`/api/schemas${schemaId ? `/${schemaId}` : ''}`, {
+                    method: schemaId ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) throw new Error('Failed to save schema');
+
+                showMessage(`Schema ${schemaId ? 'updated' : 'created'} successfully`, true);
+                loadSchemas();
+                cancelEdit();
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, false);
+            }
+        }
+
+        function cancelEdit() {
+            document.getElementById('operationForm').innerHTML = '';
+        }
+
+        function showMessage(message, isSuccess) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = isSuccess ? 'success-msg' : 'error-msg';
+            msgDiv.textContent = message;
+            document.getElementById('operationForm').prepend(msgDiv);
+            setTimeout(() => msgDiv.remove(), 3000);
+        }
+
+        async function deleteSchema(id) {
+            if (!confirm('Are you sure you want to delete this schema?')) return;
+            
+            try {
+                const response = await fetch(`/api/schemas/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) throw new Error('Failed to delete schema');
+                
+                showMessage('Schema deleted successfully', true);
+                loadSchemas();
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, false);
+            }
+        }
+
+        // Initialize
+        loadSchemas();
+    </script>
+</body>
+</html> 
