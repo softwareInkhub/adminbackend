@@ -13,15 +13,16 @@ export interface SchemaField {
 }
 
 export interface Schema {
-    id: string;      // Firebase document ID
-    uuid: string;    // Business logic ID
+    id?: string;
     name: string;
-    description?: string;
     fields: SchemaField[];
     status: 'ACTIVE' | 'INACTIVE' | 'DRAFT';
-    tags: string[];
-    createdTime: Date;
-    lastUpdateTime: Date;
+    metadata: SchemaMetadata;
+}
+
+export interface SchemaMetadata {
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 // Request/Response models for different operations

@@ -1,40 +1,67 @@
-<<<<<<< HEAD
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Schema Management System
 
-## Getting Started
+A TypeScript-based schema management system with Firebase integration.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Create, Read, Update, Delete (CRUD) operations for schemas
+- Firebase Firestore integration
+- Activity-based architecture
+- Two testing interfaces:
+  - Activity Tester for testing individual activities
+  - Schema Service Test for end-to-end testing
+
+## Project Structure
+
+```
+src/
+├── lib/
+│   └── acbda/
+│       ├── activity/      # Activity implementations
+│       ├── controller/    # Business logic controllers
+│       ├── model/         # Data models and interfaces
+│       └── utils/         # Utility functions
+├── server/
+│   ├── routes/           # API routes
+│   └── index.ts          # Server entry point
+└── public/
+    ├── ActivityTester.html    # Activity testing interface
+    ├── SchemaServiceTest.html # Schema service testing interface
+    └── test.html             # Legacy test interface
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Install dependencies:
+```bash
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Configure Firebase:
+   - Create a Firebase project
+   - Add your Firebase configuration to `src/lib/acbda/accessor/firebase.accessor.ts`
 
-## Learn More
+3. Start the development server:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+4. Access the testing interfaces:
+   - Activity Tester: http://localhost:3000/ActivityTester.html
+   - Schema Service Test: http://localhost:3000/SchemaServiceTest.html
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## API Routes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Schemas
+- `GET /api/schemas` - Get all schemas
+- `GET /api/schemas/:id` - Get schema by ID
+- `POST /api/schemas` - Create new schema
+- `PUT /api/schemas/:id` - Update schema
+- `DELETE /api/schemas/:id` - Delete schema
 
-## Deploy on Vercel
+## Technologies Used
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-=======
-# adminbackend
->>>>>>> 57aec1117bf1bec9b6d030ab3d04171ec0855128
+- TypeScript
+- Express.js
+- Firebase/Firestore
+- Activity Pattern Architecture

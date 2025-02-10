@@ -127,4 +127,28 @@ export class FirebaseDataAccessor {
       throw error;
     }
   }
+
+  async createDocument<T extends DocumentData>(
+    collectionName: string, 
+    data: T
+  ): Promise<string> {
+    const docRef = await addDoc(collection(this.db, collectionName), data);
+    return docRef.id;
+  }
+
+  async queryDocuments<T extends DocumentData>(
+    collectionName: string, 
+    queryParams: QueryParams
+  ): Promise<T[]> {
+    const collectionRef = collection(this.db, collectionName);
+    const q = query(collectionRef, where(queryParams.field, queryParams.operator as any, queryParams.value));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }) as unknown as T);
+  }
+}
+
+interface QueryParams {
+  field: string;
+  operator: string;
+  value: unknown;
 } 

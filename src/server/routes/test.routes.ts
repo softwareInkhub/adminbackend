@@ -1,9 +1,13 @@
 import { Router } from 'express';
 import path from 'path';
 import { Logger } from '../../lib/acbda/utils/logger';
+import express from 'express';
 
 const router = Router();
 const COMPONENT = 'TestRoutes';
+
+// Serve static files from public directory
+router.use('/public', express.static(path.join(process.cwd(), 'public')));
 
 router.get('/schema', (req, res) => {
     try {

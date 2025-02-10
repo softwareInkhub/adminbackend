@@ -1,5 +1,4 @@
 import { SchemaController } from '../../controller/schema.controller';
-import { SchemaBuilder } from '../../builder/schema.builder';
 import { FirebaseDataAccessor } from '../../dataaccessor/firebase.dataaccessor';
 import { Logger } from '../../utils/logger';
 
@@ -31,12 +30,21 @@ export interface CreateSchemaResponse {
   message: string;
 }
 
+interface SchemaData {
+  name: string;
+  description?: string;
+  fields: SchemaField[];
+  status: 'ACTIVE' | 'INACTIVE' | 'DRAFT';
+  tags: string[];
+  [key: string]: unknown;
+}
+
 export class CreateSchemaActivity {
   private readonly COMPONENT = 'CreateSchemaActivity';
 
   constructor(private schemaController: SchemaController) {}
 
-  async execute(request: CreateSchemaRequest): Promise<CreateSchemaResponse> {
+  async execute(request: SchemaData): Promise<CreateSchemaResponse> {
     try {
       Logger.log(this.COMPONENT, 'execute', 'Starting schema creation', request);
       // Validate request
@@ -45,11 +53,10 @@ export class CreateSchemaActivity {
       // Execute controller
       const result = await this.schemaController.createSchema(request);
 
-      const response = {
-        id: result.id,
+      const response: CreateSchemaResponse = {
+        id: result.id || '',  // Provide empty string as fallback
         success: true,
-        message: 'Schema created successfully',
-        data: result
+        message: 'Schema created successfully'
       };
       Logger.log(this.COMPONENT, 'execute', 'Schema creation completed', response);
       return response;
@@ -59,7 +66,7 @@ export class CreateSchemaActivity {
     }
   }
 
-  private validateRequest(request: CreateSchemaRequest): void {
+  private validateRequest(request: SchemaData): void {
     if (!request.name) {
       throw new Error('Schema name is required');
     }

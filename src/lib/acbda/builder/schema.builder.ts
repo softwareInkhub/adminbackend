@@ -20,13 +20,20 @@ export class SchemaBuilder {
         status: schema.status,
         tags: schema.tags,
         createdTime: new Date(),
-        lastUpdateTime: new Date()
+        lastUpdateTime: new Date(),
+        metadata: {
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
       };
 
       const docId = await this.dataAccessor.create(this.COLLECTION_NAME, schemaData);
-      const result = { 
-        ...schemaData, 
-        id: docId
+      const result: Schema = {
+        id: docId,
+        name: schemaData.name,
+        fields: schemaData.fields,
+        status: schemaData.status,
+        metadata: schemaData.metadata
       };
       Logger.log(this.COMPONENT, 'createSchema', 'Schema created successfully', result);
       return result;
