@@ -1,0 +1,12 @@
+{
+  "watch": [
+    "src/server/**/*.ts",
+    "src/lib/acbda/**/*.ts"
+  ],
+  "ignore": [
+    "**/*.test.ts",
+    "node_modules"
+  ],
+  "ext": "ts",
+  "exec": "ts-node src/server/index.ts"
+} 

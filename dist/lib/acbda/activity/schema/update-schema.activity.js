@@ -1,4 +1,7 @@
-export class UpdateSchemaActivity {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.UpdateSchemaActivity = void 0;
+class UpdateSchemaActivity {
     constructor(schemaController) {
         this.schemaController = schemaController;
     }
@@ -16,3 +19,4 @@ export class UpdateSchemaActivity {
         }
     }
 }
+exports.UpdateSchemaActivity = UpdateSchemaActivity;

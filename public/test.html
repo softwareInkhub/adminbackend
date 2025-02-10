@@ -241,7 +241,8 @@
                         <td>${schema.description || '-'}</td>
                         <td>${schema.status}</td>
                         <td><pre>${JSON.stringify(schema.fields, null, 2)}</pre></td>
-                        <td>${schema.tags?.map(tag => `<span class="tag">${tag}</span>`).join(' ') || '-'}</td>
+                        <td>${schema.tags ? (Array.isArray(schema.tags) ? schema.tags : []).map(tag => 
+                            `<span class="tag">${tag}</span>`).join(' ') : '-'}</td>
                         <td>${formatDate(schema.createdTime || schema.createdAt)}</td>
                         <td>
                             <button class="edit" onclick='editSchema("${schema.id}")'>Edit</button>
@@ -458,7 +459,8 @@
                         </tr>
                         <tr>
                             <td>Tags</td>
-                            <td>${schema.tags?.map(tag => `<span class="tag">${tag}</span>`).join(' ') || '-'}</td>
+                            <td>${schema.tags ? (Array.isArray(schema.tags) ? schema.tags : []).map(tag => 
+                                `<span class="tag">${tag}</span>`).join(' ') : '-'}</td>
                         </tr>
                         <tr>
                             <td>Created</td>

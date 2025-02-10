@@ -17,6 +17,7 @@ export interface Schema {
     name: string;
     fields: SchemaField[];
     status: 'ACTIVE' | 'INACTIVE' | 'DRAFT';
+    tags: string[];
     metadata: SchemaMetadata;
 }
 

@@ -1,4 +1,7 @@
-export class GetSchemaActivity {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.GetSchemaActivity = void 0;
+class GetSchemaActivity {
     constructor(schemaController) {
         this.schemaController = schemaController;
     }
@@ -11,3 +14,4 @@ export class GetSchemaActivity {
         }
     }
 }
+exports.GetSchemaActivity = GetSchemaActivity;

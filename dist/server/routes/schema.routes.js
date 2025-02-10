@@ -1,95 +1,94 @@
-import { Router } from 'express';
-import { CreateSchemaActivity, GetSchemaActivity, GetAllSchemasActivity, UpdateSchemaActivity, DeleteSchemaActivity, Logger, SchemaController, SchemaBuilder, FirebaseDataAccessor } from '../../lib/acbda/index.js';
-const router = Router();
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const firebase_dataaccessor_1 = require("../../lib/acbda/dataaccessor/firebase.dataaccessor");
+const schema_builder_1 = require("../../lib/acbda/builder/schema.builder");
+const schema_controller_1 = require("../../lib/acbda/controller/schema.controller");
+const create_schema_activity_1 = require("../../lib/acbda/activity/schema/create-schema.activity");
+const logger_1 = require("../../lib/acbda/utils/logger");
+const router = (0, express_1.Router)();
 const COMPONENT = 'SchemaRoutes';
-// Initialize dependencies
-const dataAccessor = new FirebaseDataAccessor();
-const schemaBuilder = new SchemaBuilder(dataAccessor);
-const schemaController = new SchemaController(schemaBuilder);
-// Create Schema
-router.post('/schemas', async (req, res) => {
-    try {
-        Logger.log(COMPONENT, 'POST /schemas', 'Creating schema', req.body);
-        const activity = new CreateSchemaActivity(schemaController);
-        const result = await activity.execute(req.body);
-        Logger.log(COMPONENT, 'POST /schemas', 'Schema created', result);
-        res.status(201).json(result);
-    }
-    catch (error) {
-        Logger.error(COMPONENT, 'POST /schemas', error);
-        res.status(400).json({
-            success: false,
-            message: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
-    }
-});
-// Get All Schemas
+// Initialize dependencies after environment variables are loaded
+const initializeDependencies = () => {
+    const dataAccessor = new firebase_dataaccessor_1.FirebaseDataAccessor();
+    const schemaBuilder = new schema_builder_1.SchemaBuilder(dataAccessor);
+    return new schema_controller_1.SchemaController(schemaBuilder);
+};
+const schemaController = initializeDependencies();
+// Get all schemas
 router.get('/schemas', async (req, res) => {
     try {
-        Logger.log(COMPONENT, 'GET /schemas', 'Fetching all schemas');
-        const activity = new GetAllSchemasActivity(schemaController);
-        const result = await activity.execute();
-        Logger.log(COMPONENT, 'GET /schemas', 'Schemas fetched', result);
-        res.json(result);
+        const schemas = await schemaController.getAllSchemas();
+        // Ensure tags is always an array
+        const normalizedSchemas = schemas.map(schema => ({
+            ...schema,
+            tags: schema.tags || [] // Use optional chaining
+        }));
+        res.json(normalizedSchemas);
     }
     catch (error) {
-        Logger.error(COMPONENT, 'GET /schemas', error);
-        res.status(500).json({
-            success: false,
-            message: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        logger_1.Logger.error(COMPONENT, 'GET /schemas', error);
+        res.status(500).json({ error: 'Failed to fetch schemas' });
     }
 });
-// Get Schema by ID
+// Get schema by ID
 router.get('/schemas/:id', async (req, res) => {
     try {
-        Logger.log(COMPONENT, 'GET /schemas/:id', 'Fetching schema', { id: req.params.id });
-        const activity = new GetSchemaActivity(schemaController);
-        const result = await activity.execute(req.params.id);
-        Logger.log(COMPONENT, 'GET /schemas/:id', 'Schema fetched', result);
-        res.json(result);
+        const schema = await schemaController.getSchema(req.params.id);
+        // Always normalize tags to be an array
+        const normalizedSchema = {
+            ...schema,
+            tags: Array.isArray(schema.tags) ? schema.tags : []
+        };
+        res.json(normalizedSchema);
     }
     catch (error) {
-        Logger.error(COMPONENT, 'GET /schemas/:id', error);
-        res.status(404).json({
-            success: false,
-            message: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        logger_1.Logger.error(COMPONENT, 'GET /schemas/:id', error);
+        res.status(500).json({ error: 'Failed to fetch schema' });
     }
 });
-// Update Schema
-router.put('/schemas/:id', async (req, res) => {
+// Create new schema
+router.post('/schemas', async (req, res) => {
     try {
-        const updateData = { id: req.params.id, ...req.body };
-        Logger.log(COMPONENT, 'PUT /schemas/:id', 'Updating schema', updateData);
-        const activity = new UpdateSchemaActivity(schemaController);
-        const result = await activity.execute(updateData);
-        Logger.log(COMPONENT, 'PUT /schemas/:id', 'Schema updated', result);
+        const activity = new create_schema_activity_1.CreateSchemaActivity(schemaController);
+        const result = await activity.execute(req.body);
         res.json(result);
     }
     catch (error) {
-        Logger.error(COMPONENT, 'PUT /schemas/:id', error);
-        res.status(400).json({
-            success: false,
-            message: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        logger_1.Logger.error(COMPONENT, 'POST /schemas', error);
+        res.status(500).json({ error: 'Failed to create schema' });
     }
 });
-// Delete Schema
+// Delete schema
 router.delete('/schemas/:id', async (req, res) => {
     try {
-        Logger.log(COMPONENT, 'DELETE /schemas/:id', 'Deleting schema', { id: req.params.id });
-        const activity = new DeleteSchemaActivity(schemaController);
-        const result = await activity.execute(req.params.id);
-        Logger.log(COMPONENT, 'DELETE /schemas/:id', 'Schema deleted', result);
-        res.json(result);
+        await schemaController.deleteSchema(req.params.id);
+        res.json({ success: true, message: 'Schema deleted successfully' });
     }
     catch (error) {
-        Logger.error(COMPONENT, 'DELETE /schemas/:id', error);
-        res.status(400).json({
-            success: false,
-            message: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        logger_1.Logger.error(COMPONENT, 'DELETE /schemas/:id', error);
+        res.status(500).json({ error: 'Failed to delete schema' });
     }
 });
-export default router;
+// Add PUT route for updating schemas
+router.put('/schemas/:id', async (req, res) => {
+    try {
+        const updatedSchema = await schemaController.updateSchema({
+            id: req.params.id,
+            ...req.body,
+            // Ensure tags is an array
+            tags: Array.isArray(req.body.tags) ? req.body.tags : []
+        });
+        // Normalize response
+        const normalizedSchema = {
+            ...updatedSchema,
+            tags: Array.isArray(updatedSchema.tags) ? updatedSchema.tags : []
+        };
+        res.json(normalizedSchema);
+    }
+    catch (error) {
+        logger_1.Logger.error(COMPONENT, 'PUT /schemas/:id', error);
+        res.status(500).json({ error: 'Failed to update schema' });
+    }
+});
+exports.default = router;

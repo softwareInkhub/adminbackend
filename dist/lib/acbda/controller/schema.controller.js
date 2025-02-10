@@ -1,20 +1,23 @@
-import { Logger } from '../utils/logger';
-export class SchemaController {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SchemaController = void 0;
+const logger_1 = require("../utils/logger");
+class SchemaController {
     constructor(schemaBuilder) {
         this.schemaBuilder = schemaBuilder;
         this.COMPONENT = 'SchemaController';
     }
     async createSchema(request) {
         try {
-            Logger.log(this.COMPONENT, 'createSchema', 'Processing create request', request);
+            logger_1.Logger.log(this.COMPONENT, 'createSchema', 'Processing create request', request);
             const schemaWithSystemFields = this.addSystemFields(request);
-            Logger.log(this.COMPONENT, 'createSchema', 'Added system fields', schemaWithSystemFields);
+            logger_1.Logger.log(this.COMPONENT, 'createSchema', 'Added system fields', schemaWithSystemFields);
             const result = await this.schemaBuilder.createSchema(schemaWithSystemFields);
-            Logger.log(this.COMPONENT, 'createSchema', 'Schema created successfully', result);
+            logger_1.Logger.log(this.COMPONENT, 'createSchema', 'Schema created successfully', result);
             return result;
         }
         catch (error) {
-            Logger.error(this.COMPONENT, 'createSchema', error);
+            logger_1.Logger.error(this.COMPONENT, 'createSchema', error);
             throw error;
         }
     }
@@ -28,7 +31,15 @@ export class SchemaController {
         return await this.schemaBuilder.updateSchema(request);
     }
     async deleteSchema(id) {
-        await this.schemaBuilder.deleteSchema(id);
+        try {
+            logger_1.Logger.log('SchemaController', 'deleteSchema', `Deleting schema: ${id}`);
+            await this.schemaBuilder.deleteSchema(id);
+            logger_1.Logger.log('SchemaController', 'deleteSchema', 'Schema deleted successfully');
+        }
+        catch (error) {
+            logger_1.Logger.error('SchemaController', 'deleteSchema', `Delete operation failed: ${error}`);
+            throw error;
+        }
     }
     addSystemFields(request) {
         const systemFields = [
@@ -68,3 +79,4 @@ export class SchemaController {
         };
     }
 }
+exports.SchemaController = SchemaController;

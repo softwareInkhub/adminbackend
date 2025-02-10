@@ -18,7 +18,7 @@ export class SchemaBuilder {
         description: schema.description,
         fields: schema.fields,
         status: schema.status,
-        tags: schema.tags,
+        tags: Array.isArray(schema.tags) ? schema.tags : [],
         createdTime: new Date(),
         lastUpdateTime: new Date(),
         metadata: {
@@ -33,6 +33,7 @@ export class SchemaBuilder {
         name: schemaData.name,
         fields: schemaData.fields,
         status: schemaData.status,
+        tags: schemaData.tags,
         metadata: schemaData.metadata
       };
       Logger.log(this.COMPONENT, 'createSchema', 'Schema created successfully', result);
