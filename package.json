@@ -2,13 +2,11 @@
   "name": "admin-backend",
   "version": "0.1.0",
   "private": true,
-  "type": "commonjs",
   "scripts": {
     "dev": "nodemon",
+    "prebuild": "rm -rf dist",
     "build": "tsc --project tsconfig.json && cp -r public dist/",
-    "start": "node dist/server/index.js",
-    "clean": "rm -rf dist",
-    "build:clean": "npm run clean && npm run build"
+    "start": "node dist/server/index.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .field-container {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 8px 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button.delete { background: #dc3545; }
+        button.edit { background: #28a745; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th { background-color: #f2f2f2; }
+        td pre {
+            max-height: 150px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin: 0;
+            font-size: 12px;
+        }
+        .tag {
+            display: inline-block;
+            background: #e0e0e0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin: 2px;
+            font-size: 12px;
+        }
+        .hidden { display: none; }
+        #schemasTable td:nth-child(4) {
+            width: 300px;
+            max-width: 300px;
+        }
+        .response {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        #searchResult {
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+        .search-result-table {
+            width: 100%;
+            margin-top: 10px;
+        }
+        #searchId {
+            padding: 8px;
+            width: 300px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .schema-form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            flex: 1;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-group input[type="text"],
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .field-container {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .form-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .form-actions button {
+            padding: 10px 20px;
+        }
+        button.cancel {
+            background: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <h1>Schema Management</h1>
+    
+    <!-- Schema List -->
+    <div class="section">
+        <h2>Schemas</h2>
+        <div id="schemasContainer"></div>
+    </div>
+
+    <!-- Add this after the Schema List section and before Create Schema Form -->
+    <div class="section">
+        <h2>Search Schema</h2>
+        <div class="form-group">
+            <input type="text" id="searchId" placeholder="Enter Schema ID">
+            <button onclick="searchSchema()">Search</button>
+        </div>
+        <div id="searchResult"></div>
+    </div>
+
+    <!-- Create Schema Form -->
+    <div class="section schema-form" id="schemaFormSection">
+        <h2 id="formTitle">Create New Schema</h2>
+        <form id="schemaForm">
+            <input type="hidden" id="schemaId">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Name:</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Status:</label>
+                    <select id="status" required>
+                        <option value="DRAFT">Draft</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Description:</label>
+                <input type="text" id="description">
+            </div>
+            <div class="form-group">
+                <label>Tags (comma separated):</label>
+                <input type="text" id="tags">
+            </div>
+            <div id="fieldsContainer">
+                <div class="form-row">
+                    <h3>Fields</h3>
+                    <button type="button" onclick="addField()" class="add-field">Add Field</button>
+                </div>
+                <div id="fieldsList"></div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" id="submitButton">Create Schema</button>
+                <button type="button" onclick="resetForm()" class="cancel">Cancel</button>
+            </div>
+        </form>
+        <div id="formResponse" class="response"></div>
+    </div>
+
+    <script>
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSchemas();
+            addField();
+        });
+
+        async function loadSchemas() {
+            try {
+                const response = await fetch('/api/schemas');
+                const schemas = await response.json();
+                
+                const container = document.getElementById('schemasContainer');
+                container.innerHTML = ''; // Clear existing content
+                
+                const table = document.createElement('table');
+                table.id = 'schemasTable';
+                table.innerHTML = `
+                    <tr>
+                        <th>Document ID</th>
+                        <th>UUID</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Fields</th>
+                        <th>Tags</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                `;
+
+                schemas.forEach(schema => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${schema.id || '-'}</td>
+                        <td>${schema.uuid || '-'}</td>
+                        <td>${schema.name}</td>
+                        <td>${schema.description || '-'}</td>
+                        <td>${schema.status}</td>
+                        <td><pre>${JSON.stringify(schema.fields, null, 2)}</pre></td>
+                        <td>${schema.tags ? (Array.isArray(schema.tags) ? schema.tags : []).map(tag => 
+                            `<span class="tag">${tag}</span>`).join(' ') : '-'}</td>
+                        <td>${formatDate(schema.createdTime || schema.createdAt)}</td>
+                        <td>
+                            <button class="edit" onclick='editSchema("${schema.id}")'>Edit</button>
+                            <button class="delete" onclick='deleteSchema("${schema.id}")'>Delete</button>
+                        </td>
+                    `;
+                    table.appendChild(row);
+                });
+
+                container.appendChild(table);
+            } catch (error) {
+                console.error('Error loading schemas:', error);
+                showResponse('Error loading schemas: ' + error.message, false);
+            }
+        }
+
+        function formatDate(timestamp) {
+            if (!timestamp) return '-';
+            if (timestamp.seconds) {
+                return new Date(timestamp.seconds * 1000).toLocaleString();
+            }
+            return new Date(timestamp).toLocaleString();
+        }
+
+        async function editSchema(id) {
+            try {
+                const response = await fetch(`/api/schemas/${id}`);
+                const schema = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(schema.message || 'Failed to fetch schema');
+                }
+
+                // Populate form with schema data
+                document.getElementById('formTitle').textContent = 'Edit Schema';
+                document.getElementById('submitButton').textContent = 'Update Schema';
+                document.getElementById('schemaId').value = schema.id;
+                document.getElementById('name').value = schema.name;
+                document.getElementById('description').value = schema.description || '';
+                document.getElementById('status').value = schema.status;
+                document.getElementById('tags').value = schema.tags?.join(', ') || '';
+
+                // Clear and populate fields
+                document.getElementById('fieldsList').innerHTML = '';
+                schema.fields.forEach(field => {
+                    addField(field);
+                });
+
+                // Scroll to form
+                document.getElementById('schemaFormSection').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                showResponse(`Error loading schema: ${error.message}`, false);
+            }
+        }
+
+        function addField(existingField = null) {
+            const fieldHtml = `
+                <div class="field-container">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Name:</label>
+                            <input type="text" class="fieldName" value="${existingField?.name || ''}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Type:</label>
+                            <select class="fieldType" required>
+                                ${['string', 'number', 'boolean', 'date', 'array', 'object', 'enum']
+                                    .map(type => `<option value="${type}" ${existingField?.type === type ? 'selected' : ''}>${type}</option>`)
+                                    .join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Required:</label>
+                            <input type="checkbox" class="fieldRequired" ${existingField?.required ? 'checked' : ''}>
+                        </div>
+                        <button type="button" onclick="this.parentElement.parentElement.remove()" class="delete">Remove</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('fieldsList').insertAdjacentHTML('beforeend', fieldHtml);
+        }
+
+        function resetForm() {
+            document.getElementById('formTitle').textContent = 'Create New Schema';
+            document.getElementById('submitButton').textContent = 'Create Schema';
+            document.getElementById('schemaForm').reset();
+            document.getElementById('schemaId').value = '';
+            document.getElementById('fieldsList').innerHTML = '';
+            addField();
+        }
+
+        // Update form submission handler
+        document.getElementById('schemaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            try {
+                const fields = Array.from(document.getElementsByClassName('field-container'))
+                    .map(container => ({
+                        name: container.querySelector('.fieldName').value,
+                        type: container.querySelector('.fieldType').value,
+                        required: container.querySelector('.fieldRequired').checked
+                    }));
+
+                const data = {
+                    name: document.getElementById('name').value,
+                    description: document.getElementById('description').value,
+                    status: document.getElementById('status').value,
+                    tags: document.getElementById('tags').value
+                        ? document.getElementById('tags').value.split(',').map(tag => tag.trim())
+                        : [],
+                    fields: fields
+                };
+
+                const schemaId = document.getElementById('schemaId').value;
+                const isEdit = !!schemaId;
+
+                const response = await fetch(`/api/schemas${isEdit ? `/${schemaId}` : ''}`, {
+                    method: isEdit ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) throw new Error(`Failed to ${isEdit ? 'update' : 'create'} schema`);
+
+                showResponse(`Schema ${isEdit ? 'updated' : 'created'} successfully`, true);
+                resetForm();
+                loadSchemas();
+            } catch (error) {
+                showResponse(`Error: ${error.message}`, false);
+            }
+        });
+
+        async function deleteSchema(id) {
+            if (!confirm('Are you sure you want to delete this schema?')) {
+                console.log('Delete operation cancelled by user');
+                return;
+            }
+            
+            console.log('Starting delete operation for schema:', id);
+            try {
+                const response = await fetch(`/api/schemas/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                console.log('Delete operation response:', result);
+                
+                if (!response.ok) {
+                    throw new Error(result.message || 'Failed to delete schema');
+                }
+                
+                showResponse('Schema deleted successfully', true);
+                console.log('Reloading schemas after successful deletion');
+                loadSchemas();
+            } catch (error) {
+                console.error('Error in delete operation:', error);
+                showResponse('Error deleting schema: ' + error.message, false);
+            }
+        }
+
+        function showResponse(message, isSuccess) {
+            const responseDiv = document.getElementById('formResponse');
+            responseDiv.textContent = message;
+            responseDiv.className = `response ${isSuccess ? 'success' : 'error'}`;
+        }
+
+        async function searchSchema() {
+            const searchId = document.getElementById('searchId').value.trim();
+            const resultDiv = document.getElementById('searchResult');
+            
+            if (!searchId) {
+                showResponse('Please enter a schema ID', false);
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/schemas/${searchId}`);
+                const schema = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(schema.message || 'Schema not found');
+                }
+
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+                    <table class="search-result-table">
+                        <tr>
+                            <th>Property</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr>
+                            <td>Document ID</td>
+                            <td>${schema.id || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td>UUID</td>
+                            <td>${schema.uuid || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td>Name</td>
+                            <td>${schema.name}</td>
+                        </tr>
+                        <tr>
+                            <td>Description</td>
+                            <td>${schema.description || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td>Status</td>
+                            <td>${schema.status}</td>
+                        </tr>
+                        <tr>
+                            <td>Fields</td>
+                            <td><pre>${JSON.stringify(schema.fields, null, 2)}</pre></td>
+                        </tr>
+                        <tr>
+                            <td>Tags</td>
+                            <td>${schema.tags ? (Array.isArray(schema.tags) ? schema.tags : []).map(tag => 
+                                `<span class="tag">${tag}</span>`).join(' ') : '-'}</td>
+                        </tr>
+                        <tr>
+                            <td>Created</td>
+                            <td>${formatDate(schema.createdTime || schema.createdAt)}</td>
+                        </tr>
+                        <tr>
+                            <td>Last Updated</td>
+                            <td>${formatDate(schema.lastUpdateTime || schema.updatedAt)}</td>
+                        </tr>
+                    </table>
+                    <div style="margin-top: 10px">
+                        <button class="edit" onclick='editSchema("${schema.id}")'>Edit</button>
+                        <button class="delete" onclick='deleteSchema("${schema.id}")'>Delete</button>
+                    </div>
+                `;
+                
+                showResponse('Schema found', true);
+            } catch (error) {
+                console.error('Search error:', error);
+                resultDiv.style.display = 'none';
+                showResponse(`Error: ${error.message}`, false);
+            }
+        }
+
+        // Add event listener for Enter key in search input
+        document.getElementById('searchId').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchSchema();
+            }
+        });
+    </script>
+</body>
+</html> 
