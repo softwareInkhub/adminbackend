@@ -4,11 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "nodemon",
-    "build": "tsc --project tsconfig.json",
+    "build": "tsc --project tsconfig.json && cp -r public dist/",
     "start": "node dist/server/index.js",
     "clean": "rm -rf dist",
-    "build:clean": "npm run clean && npm run build",
-    "postbuild": "cp -r public dist/"
+    "build:clean": "npm run clean && npm run build"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -26,5 +25,8 @@
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
