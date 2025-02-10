@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   // If your static files are in the public directory
   publicRuntimeConfig: {
     staticFolder: '/public',
